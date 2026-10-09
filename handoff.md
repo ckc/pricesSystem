@@ -22,7 +22,7 @@ Webman (Workerman) PHP API backend for a bilingual (中文/EN) product price-com
 3. **Dead/placeholder code:** `NetWorkController::typeAwsBgp()` is an empty stub; `Coupons`/`Test` models have no routes; nothing writes to `prices_log` despite the model existing.
 4. **Minor code/message mismatches:** `process/Task.php` comment says 07:50 but cron is `0 6 * * *`; `GoodsController::likes` English error says "no less 12 letter" while the check is `< 6`.
 5. **Redis is hardcoded** to `127.0.0.1:6379` in `config/redis.php` — no env override.
-6. No `.gitignore`, no test suite.
+6. `.gitignore` added 2026-10-09 (excludes `.env`, `vendor/`, `runtime/`, `public/goods/` uploads). No test suite.
 
 ## How to verify
 
