@@ -62,7 +62,7 @@ class ShopController extends Controller
         } catch (ValidationException $e) {
             return $this->messageJson(403, $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            return $this->messageJson(403, $e->getMessage());
+            return $this->messageJson(404, $e->getMessage());
         }
     }
 

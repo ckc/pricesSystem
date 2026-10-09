@@ -56,9 +56,9 @@ class PricesController extends Controller
     	try {
     		$post = $request->post();
     		$post['id'] = $id;
-    		$post['shop_id'] = intval($post['shop_id']);
-    		$post['prices'] = floatval($post['prices']);
-			$post['sku'] = intval($post['sku']);
+    		$post['shop_id'] = intval($post['shop_id'] ?? 0);
+    		$post['prices'] = floatval($post['prices'] ?? 0);
+			$post['sku'] = intval($post['sku'] ?? 0);
 			if($post['sku'] < 1) {
 				$post['sku'] = 1;
 			}

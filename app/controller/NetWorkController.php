@@ -33,9 +33,13 @@ class NetWorkController extends Controller
                 'registry' => Validator::Alpha()->setName('Registry'),
             ]);
             if($data['type'] == 'delegated') {
-                list($type, $registry, $date) = explode('-', basename($data['url']));
+                $parts = explode('-', basename($data['url']));
+                if(count($parts) < 3) {
+                    return $this->messageJson(403, 'invalid delegated filename');
+                }
+                list($type, $registry, $date) = $parts;
             } else {
-                $registry = $data['registry'];
+                $registry = $data['registry'] ?? '';
                 if($data['type'] == 'rex') {
                     NetRex::query()->where('country', strtolower($registry))->delete();
                 }
