@@ -1,0 +1,50 @@
+# pricesSystem
+
+> Bilingual (Chinese/English) product price-comparison API backend on Webman (Workerman PHP): GTIN-keyed goods catalog, brands, shops, per-shop prices, product images, shelf-rack locations, plus an IP network-statistics (RIR/REX) ingest pipeline.
+
+## Stack
+
+- PHP >= 7.2, `workerman/webman-framework` ^1.5 (event-driven multi-process HTTP server)
+- MySQL/MariaDB via `illuminate/database` (Eloquent); Redis via `illuminate/redis` (hardcoded 127.0.0.1:6379)
+- `intervention/image` (imagick) for uploads; `binaryoung/jieba-php` + `yurunsoft/chinese-util` for Chinese search tokenization
+- `workerman/validation` (Respect-style), `workerman/http-client`, `workerman/crontab`, `webman/cors`, `vlucas/phpdotenv`
+
+## Run
+
+`composer install` → copy `.env.example` to `.env` (DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD) → import `priceSystem.sql` → `php start.php start` → http://127.0.0.1:8787 (Windows: `php windows.php`). Config in `config/`; listen addr and worker count (`cpu_count()*4`) in `config/server.php`; debug=true and timezone Asia/Shanghai in `config/app.php`.
+
+## API (all under http://127.0.0.1:8787)
+
+Response envelope: `{"code":200,"data":{…},"count":1,"msg":"ok"}` (errors: non-200 code + msg).
+
+- `GET /api/v1/config` — category tree (types level 0/1)
+- `GET /api/v1/goods/cate?id=1,2` — goods by category ids
+- `GET /api/v1/goods/price/{gtin}` — per-shop price comparison; `PUT /api/v1/goods/price/{id}` — upsert price (body: shop_id, prices, sku; id=goods id; refreshes goods.low_price/high_price)
+- `GET /api/v1/goods/rack/{gtin}` — shelf-rack locations
+- `GET /api/v1/goods/{sn}` / `POST /api/v1/goods/{sn}` / `PUT /api/v1/goods/{id}` — goods detail/create/edit (sn = GTIN barcode)
+- `GET /api/v1/likes/goods?gtin=|en_name=|ch_name=` — bilingual keyword search (en ≥6 chars, zh ≥2 chars; 12/13-digit input treated as barcode; Chinese tokenized via Jieba)
+- `GET /api/v1/brand/search?keyword=` / `GET /api/v1/brand/{name}` / `POST /api/v1/brand` / `PUT /api/v1/brand/{id}`
+- `GET /api/v1/shop/{name}` / `POST /api/v1/shop` / `PUT /api/v1/shop/{id}`
+- `GET /api/app/goods/list?page=&limit=` (paginated, brand names + CDN image URLs), `GET /api/app/check/goods/sn?code=` (barcode staging lookup in `allcode`), `GET /api/app/sync/goods` (one-off `GS1 ` prefix strip on goods.country), `POST /api/app/goods/delete/{id}`, brand/shop list+search+delete equivalents, `POST /api/app/files` (jpg/jpeg/png upload → resized ≤600px height → `public/goods/YYYY/Mon/` + `files` row → returns CDN URL)
+- `POST /api/network/sync` (body: url, type=delegated|rex|awsbgp, registry) — async ingest of RIR delegated-stats or REX JSON into IP-range tables; sync-log statuses 0 pending / 1 done / 2 download-failed / 3 parse-error / 5 exception; `awsbgp` is an unimplemented stub
+- `/backend/{path}` → 302 redirect to `https://img.goods.acghx.net/{path}` (image CDN)
+
+## Data model (MySQL, utf8mb4)
+
+Tables in `priceSystem.sql`: `goods` (GTIN unique; bilingual name_chi/name_en, descText_chi/descText_en, specs, country, brand FK, low_price/high_price denormalized min/max, type = comma-wrapped category ids), `prices` (per goods_id+shop_id+sku), `prices_log`, `shops` (bilingual name/address/ares), `brand` (bilingual + country), `types` (category tree, level 0/1, seeded), `coupons`, `files` (upload records). NOT in the dump (re-export needed): `network_rir_statistics` (PK hashcode string), `net_rex`, network sync-log, `allcode`, `good_rack`, `goods_rack_info`. Prices keyed by (goods_id, shop_id, sku), sku defaults to 'default'. Daily 06:00 cron (`process/Task.php`) deletes orphan uploads older than 2 days.
+
+## Key files
+
+- `start.php`, `windows.php`, `windows.bat` — entry points
+- `config/route.php` — all routes; `config/process.php` — monitor (dev auto-reload) + task cron
+- `app/controller/` — Index, Goods, Prices, Brands, Shop, Api, Files, NetWork controllers
+- `app/model/` — Eloquent models with explicit `$table` (note: `allcode`, `good_rack`, `network_rir_statistics`)
+- `app/helpers/Ipv4.php`, `Ipv6.php` — IP range math; `app/functions.php` — `ip2long_int()`, `makeHashId()`
+- `support/Controller.php` — `dataJson()`/`messageJson()`/`listJson()` envelope; `support/helpers.php`, `support/bootstrap.php`
+
+## Notes
+
+- No authentication on any route; `debug: true` in config — not production-ready as shipped.
+- Validation pattern: `Validator::input($in, [field => Validator::…->setName(…)])`, catch `ValidationException` → 403, `ModelNotFoundException` → 404.
+- Deletes use `POST /…/delete/{id}`; edits use PUT; image URLs always built on `https://img.goods.acghx.net/`.
+- License: MIT.
