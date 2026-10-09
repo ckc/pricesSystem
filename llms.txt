@@ -31,7 +31,7 @@ Response envelope: `{"code":200,"data":{…},"count":1,"msg":"ok"}` (errors: non
 
 ## Data model (MySQL, utf8mb4)
 
-Tables in `priceSystem.sql`: `goods` (GTIN unique; bilingual name_chi/name_en, descText_chi/descText_en, specs, country, brand FK, low_price/high_price denormalized min/max, type = comma-wrapped category ids), `prices` (per goods_id+shop_id+sku), `prices_log`, `shops` (bilingual name/address/ares), `brand` (bilingual + country), `types` (category tree, level 0/1, seeded), `coupons`, `files` (upload records). NOT in the dump (re-export needed): `network_rir_statistics` (PK hashcode string), `net_rex`, network sync-log, `allcode`, `good_rack`, `goods_rack_info`. Prices keyed by (goods_id, shop_id, sku), sku defaults to 'default'. Daily 06:00 cron (`process/Task.php`) deletes orphan uploads older than 2 days.
+Tables in `priceSystem.sql`: `goods` (GTIN unique; bilingual name_chi/name_en, descText_chi/descText_en, specs, country, brand FK, low_price/high_price denormalized min/max, type = comma-wrapped category ids), `prices` (per goods_id+shop_id+sku), `prices_log`, `shops` (bilingual name/address/ares), `brand` (bilingual + country), `types` (category tree, level 0/1, seeded), `coupons`, `files` (upload records). NOT in the dump (re-export needed): `network_rir_statistics` (PK hashcode string), `network_rir_rex`, `network_rir_log`, `allcode`, `good_rack`, `goods_rackinfo`. Prices keyed by (goods_id, shop_id, sku), sku defaults to 'default'; every save also appends a `prices_log` row via the model's booted hook. Daily 06:00 cron (`process/Task.php`) deletes orphan uploads older than 2 days.
 
 ## Key files
 

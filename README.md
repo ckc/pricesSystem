@@ -100,12 +100,12 @@ Import `priceSystem.sql` (phpMyAdmin dump of the `priceSystem` database, MariaDB
 
 `goods` (GTIN unique key), `prices`, `prices_log`, `shops`, `brand`, `types` (category tree, seeded), `coupons`, `files`.
 
-⚠️ The dump is **incomplete** relative to the code. These tables are used by the models but have no DDL in the dump: `network_rir_statistics` (model `NetRir`), `net_rex` (model `NetRex`), the network sync-log table (model `NetRirLog`), `allcode` (model `CodeCheck`), `good_rack` (model `GoodRack`), `goods_rack_info` (model `GoodsRackInfo`). Re-export from the production database before a fresh install, or create them manually to match the models.
+⚠️ The dump is **incomplete** relative to the code. These tables are used by the models but have no DDL in the dump: `network_rir_statistics` (model `NetRir`), `network_rir_rex` (model `NetRex`), `network_rir_log` (model `NetRirLog`), `allcode` (model `CodeCheck`), `good_rack` (model `GoodRack`), `goods_rackinfo` (model `GoodsRackInfo`). Re-export from the production database before a fresh install, or create them manually to match the models.
 
 Key relationships:
 
 - `goods` ↔ `brand` via `goods.brand`; GTIN is the canonical product key (`sn` unique index).
-- `prices` is keyed by (`goods_id`, `shop_id`, `sku`); `goods.low_price` / `goods.high_price` are denormalized min/max across all shops and refreshed on every price upsert.
+- `prices` is keyed by (`goods_id`, `shop_id`, `sku`); `goods.low_price` / `goods.high_price` are denormalized min/max across all shops and refreshed on every price upsert. Every price save also appends a `prices_log` row via the `Prices::booted()` model hook (not via a controller).
 - Text fields are bilingual pairs: `name_chi` / `name_en`, `descText_chi` / `descText_en`, `address_chi` / `address_en`, etc.
 - `goods.type` stores a comma-wrapped category id list (e.g. `,1,2,`); `types.level` 0 = top level, 1 = sub.
 
