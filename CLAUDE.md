@@ -19,10 +19,10 @@ php start.php start    # http://127.0.0.1:8787
 
 - **JSON envelope is fixed.** All controllers extend `support\Controller` and return via `dataJson()` / `messageJson()` / `listJson()`: `{"code":200,"data":{…},"count":1,"msg":"ok"}`. Never invent a different shape.
 - **Bilingual fields stay paired.** Columns come as `name_chi`/`name_en`, `descText_chi`/`descText_en`, `address_chi`/`address_en`, `ares_chi`/`ares_en`. When adding a user-facing text field, add both.
-- **Validation style:** `Respect\Validation\Validator::input($input, [field => Validator::…->setName(…)])`, wrapped in try/catch for `ValidationException` (→ 403 via `messageJson`) and `ModelNotFoundException` (→ 404). Follow it exactly.
+- **Validation style:** `Respect\Validation\Validator::input($input, [field => Validator::…->setName(…)])`, wrapped in try/catch for `ValidationException` (→ 403 via `messageJson`) and `ModelNotFoundException` (→ 404). Follow it exactly. `Validator::input()` returns only the rule keys — always read raw `$post`/`$get` with `??` defaults *before* validating, because the bootstrap error handler turns undefined-key warnings into 500s.
 - **GTIN is the canonical goods key.** `goods.gtin` has a unique index; most read endpoints address goods by GTIN in the path, writes by numeric `id`.
 - **Price semantics:** `prices` rows are unique per (`goods_id`, `shop_id`, `sku`); `sku` defaults to `'default'`. Every price upsert must refresh `goods.low_price` / `goods.high_price` (see `PricesController::goodsPost`).
-- **Models declare non-standard table names** — always check `$table` in `app/model/*` before writing queries: `allcode` (CodeCheck), `good_rack` (GoodRack), `network_rir_statistics` (NetRir, string PK `hashcode`, non-incrementing).
+- **Models declare non-standard table names** — always check `$table` in `app/model/*` before writing queries: `allcode` (CodeCheck), `good_rack` (GoodRack), `goods_rackinfo` (GoodsRackInfo), `network_rir_statistics` (NetRir, string PK `hashcode`, non-incrementing), `network_rir_rex` (NetRex), `network_rir_log` (NetRirLog).
 - **Images:** uploads land in `public/goods/YYYY/Mon/`, are resized to ≤600px height via imagick, and recorded in `files`. Public URLs use the CDN host `https://img.goods.acghx.net/` — keep building URLs that way; `/backend/{path}` redirects there.
 - **HTTP verbs:** reads are GET, creates are POST, edits are PUT, deletes are `POST /…/delete/{id}`. Keep the convention.
 
@@ -41,12 +41,14 @@ php start.php start    # http://127.0.0.1:8787
 
 ## Known gaps (do not silently work around)
 
-- `priceSystem.sql` is missing DDL for `network_rir_statistics`, `net_rex`, the network sync-log table, `allcode`, `good_rack`, `goods_rack_info`. Flag before fresh installs.
+- `priceSystem.sql` is missing DDL for `network_rir_statistics`, `network_rir_rex`, `network_rir_log`, `allcode`, `good_rack`, `goods_rackinfo`. Flag before fresh installs.
 - No auth middleware anywhere; `config/app.php` has `debug: true`. Raise both before any public deploy.
+- `POST /api/network/sync` fetches an arbitrary user-supplied URL server-side (SSRF) — combined with no auth, restrict to an allowlist of RIR/REX hosts before exposing.
+- The network sync deletes existing REX rows *before* the download completes (a failed download = data loss); parse errors are swallowed but marked done; re-syncs insert duplicate rows (the hash is random, not content-derived).
+- `app/helpers/ItemBarcode.php` is missing from the repo (custom code: `ItemBarcode::ean13($gtin)` → GS1 country name or `false`) — recover from production; goods create/edit fatals without it.
 - Redis config is hardcoded to `127.0.0.1:6379` (no env override).
-- `Coupons` and `Test` models exist with no routes; `PricesLog` model exists but nothing writes to it yet.
-- `process/Task.php` comment says 07:50 but the cron is `0 6 * * *` (06:00) — the cron is authoritative.
-- `GoodsController::likes` English error message says "no less 12 letter" but the check is `< 6`.
+- `Coupons` and `Test` models exist with no routes; `app/events/PricesEvents.php` duplicates the `Prices::booted()` hook but is never wired up (dead code — owner declined deletion on 2026-10-09, leave it).
+- Fixed 2026-10-09: undefined-key 500s across controllers (now `??`-guarded), `ShopController::infoEdit` 404, DB charset `utf8mb4`, Task cron comment, `likes()` message.
 
 ## Do / don't
 
