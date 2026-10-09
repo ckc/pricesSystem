@@ -42,7 +42,7 @@ class BrandsController extends Controller
     public function search(Request $request)
     {
         $get = $request->get();
-		$get['keyword'] = urldecode($get['keyword']);
+		$get['keyword'] = urldecode($get['keyword'] ?? '');
         $data = Validator::input($get, [
             'keyword' => Validator::stringType()->NotEmpty()->setName('Keyword')
         ]);

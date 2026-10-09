@@ -26,7 +26,7 @@ class IndexController extends Controller
 			}
 		}
 		foreach($list as $name) {
-			if($name['level'] == 1) {
+			if($name['level'] == 1 && isset($typeList[$name['pid']])) {
 				$typeList[$name['pid']]['sub'][] = [
 					'id' => $name['id'],
 					'name' => $name['name'],

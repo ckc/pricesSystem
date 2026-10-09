@@ -98,21 +98,21 @@ class GoodsController extends Controller
 			return json(['code' => 404, 'msg' => 'Goods not found']);
 		}
 		if((isset($get['en_name']) && !empty($get['en_name'])) || (isset($get['ch_name']) && !empty($get['ch_name']))) {
-            $en_name = trim(strip_tags($get['en_name'])) ?? '';
-			$ch_name = trim(strip_tags($get['ch_name'])) ?? '';
+            $en_name = trim(strip_tags($get['en_name'] ?? ''));
+			$ch_name = trim(strip_tags($get['ch_name'] ?? ''));
 			if(empty($en_name) && empty($ch_name)) {
 				return json(['code' => 40301, 'msg' => 'keyword doesnt found']);
 			}
 			if(!empty($en_name) && strlen($en_name) < 6) {
-				return json(['code' => 40301, 'msg' => 'english keyword no less 12 letter']);
+				return json(['code' => 40301, 'msg' => 'english keyword no less 6 letters']);
 			} elseif(!empty($ch_name) && mb_strlen($ch_name) < 2) {
 				return json(['code' => 40301, 'msg' => 'chinese keyword no less 2 letter']);
 			}
-			if((strlen($get['en_name']) == 13 || strlen($get['en_name']) == 12) || ctype_digit($get['en_name']) || ctype_digit($get['ch_name'])) {
-				$query = $query->orWhere('gtin', '=', trim($get['en_name']))->orWhere('gtin', '=', trim($get['ch_name']));
+			if((strlen($en_name) == 13 || strlen($en_name) == 12) || ctype_digit($en_name) || ctype_digit($ch_name)) {
+				$query = $query->orWhere('gtin', '=', trim($en_name))->orWhere('gtin', '=', trim($ch_name));
 				$this->keywords = [
 					'type' => 'gtin',
-					'value' => $get['en_name']
+					'value' => $en_name
 				];
 			}
 			$result = $this->autoMerge($en_name, $ch_name);
@@ -172,7 +172,7 @@ class GoodsController extends Controller
         $this->getPage($request);
 		$get = $request->get();
 		$query = GoodsModel::query();
-		if($get['id']) {
+		if(!empty($get['id'])) {
 			$ids = explode(',', $get['id']);
 			$type = array_values(array_filter($ids));
 			$query->where('type', 'LIKE', '%,'.implode(',',$type).',%');
@@ -192,7 +192,10 @@ class GoodsController extends Controller
         $brandList = BrandModel::query()->whereIn('id', $brandId)->get();
         $brandList = array_column($brandList->toArray(), null, 'id');
         foreach($goodsList as $key => $goods) {
-            $brandGoods = $brandList[$goods['brand']];
+            $brandGoods = $brandList[$goods['brand']] ?? [
+            	'name_chi' => '',
+            	'name_en' => ''
+            ];
 			$goodsList[$key]['images'] = empty($goods['files_path']) ? null : 'https://img.goods.acghx.net/'.$goods['files_path'];
             $goodsList[$key]['brand'] = [
                 'id' => $goods['brand'],
@@ -247,8 +250,8 @@ class GoodsController extends Controller
             $brand = BrandModel::query()->findOrFail($info->brand);
             if($info->type) {
             	$listtype = array_values(array_filter(explode(',', $info->type)));
-            	$listtype[0] = intval($listtype[0]);
-            	$listtype[1] = intval($listtype[1]) ?? 0;
+            	$listtype[0] = intval($listtype[0] ?? 0);
+            	$listtype[1] = intval($listtype[1] ?? 0);
             	$typeNameList = TypesModel::query()->where('id', '=', $listtype[0])->orWhere('id', '=', $listtype[1])->get();
             	$typeName = [];
             	foreach($typeNameList as $name) {
@@ -296,9 +299,9 @@ class GoodsController extends Controller
     {
         try {
             $post = $request->post();
-            $post['brand'] = intval($post['brand']);
-			$post['files_id'] = intval($post['files_id']);
-			$post['store_files_id'] = intval($post['store_files_id']);
+            $post['brand'] = intval($post['brand'] ?? 0);
+			$post['files_id'] = intval($post['files_id'] ?? 0);
+			$post['store_files_id'] = intval($post['store_files_id'] ?? 0);
             $data = Validator::input($post, [
             	'type' => Validator::stringType()->NotEmpty()->setName('Good type id'),
                 'name' => Validator::alwaysValid()->setName('Good zh-tw name'),
@@ -367,11 +370,11 @@ class GoodsController extends Controller
     {
         try {
             $post = $request->post();
-            $post['brand'] = intval($post['brand']);
+            $post['brand'] = intval($post['brand'] ?? 0);
             $post['brand'] = $post['brand'] < 1 ? 2 : $post['brand'];
             $post['gtin'] = $gtin;
-			$post['files_id'] = intval($post['files_id']);
-			$post['store_files_id'] = intval($post['store_files_id']);
+			$post['files_id'] = intval($post['files_id'] ?? 0);
+			$post['store_files_id'] = intval($post['store_files_id'] ?? 0);
             $data = Validator::input($post, [
             	'type' => Validator::stringType()->NotEmpty()->setName('Good type id'),
                 'name' => Validator::alwaysValid()->setName('Good zh-tw name'),
