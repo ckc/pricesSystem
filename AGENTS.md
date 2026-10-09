@@ -26,6 +26,10 @@ Operating conventions for AI agents working in this repo. Read `README.md` for t
 - `POST /api/network/sync` with `type=awsbgp` is a stub; don't build clients against it.
 - Keep fixes minimal and bilingual-safe: Chinese search tokenization in `GoodsController::autoMerge()` is deliberate behavior, not a bug.
 
+## Changelog
+
+- Every change to this repo gets an entry in `CHANGELOG.md` (newest first) — code, config, or docs. No exceptions. Write the entry in the same commit as the change.
+
 ## When in doubt
 
 Ask the owner before: exposing the service publicly (no auth + `debug: true` as shipped), changing price/GTIN semantics, or touching `NetWorkController`'s ingest statuses.
